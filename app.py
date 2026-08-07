@@ -18,7 +18,7 @@ except ImportError:
 # Page Setup & Midnight Blue + Neon Cyan Styling
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Project 7: Image Classification",
+    page_title="Image Classification",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
