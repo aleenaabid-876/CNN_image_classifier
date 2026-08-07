@@ -6,7 +6,6 @@ from torchvision.models import resnet50, ResNet50_Weights
 from PIL import Image
 import numpy as np
 import time
-import os
 
 # Try importing the interpretation module if available locally
 try:
@@ -144,34 +143,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Class Mapping (CIFAR-10)
+# Class Mapping (ImageNet-1k 1000 Standard Categories)
 # ---------------------------------------------------------
-CLASS_NAMES = [
-    'Airplane ✈️', 'Automobile 🚗', 'Bird 🐦', 'Cat 🐱', 'Deer 🦌',
-    'Dog 🐶', 'Frog 🐸', 'Horse 🐴', 'Ship 🚢', 'Truck 🚚'
-]
+weights = ResNet50_Weights.DEFAULT
+CLASS_NAMES = weights.meta["categories"]
 
 # ---------------------------------------------------------
-# Cache Model Loading
+# Cache Model Loading (Pre-trained ResNet50)
 # ---------------------------------------------------------
 @st.cache_resource
 def load_pytorch_model():
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    in_features = model.fc.in_features
-    model.fc = nn.Sequential(
-        nn.Linear(in_features, 256),
-        nn.ReLU(),
-        nn.Dropout(0.4),
-        nn.Linear(256, 10)
-    )
-    
-    weights_path = "models/transfer_resnet50.pth"
-    if os.path.exists(weights_path):
-        try:
-            model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
-        except Exception:
-            pass
-    
     model.eval()
     return model
 
@@ -184,7 +166,7 @@ model = load_pytorch_model()
 # Title Section
 st.markdown("""
 <div class="hero-container">
-    <h1 class="hero-title"> Image Classification & Object Recognition</h1>
+    <h1 class="hero-title">Image Classification & Object Recognition</h1>
     <p class="hero-subtitle">Deep Learning / Computer Vision / Model Interpretability Engine</p>
 </div>
 """, unsafe_allow_html=True)
@@ -204,7 +186,7 @@ with col_b:
     st.markdown("""
 <div class="stat-card">
     <div class="stat-label">Dataset Benchmark</div>
-    <div class="stat-value">CIFAR-10</div>
+    <div class="stat-value">ImageNet-1k</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -252,7 +234,7 @@ if uploaded_file is not None:
 
         top_idx = torch.argmax(probabilities).item()
         top_conf = probabilities[top_idx].item()
-        top_class_name = CLASS_NAMES[top_idx]
+        top_class_name = CLASS_NAMES[top_idx].replace('_', ' ').title()
 
         st.markdown(f'<div class="top-prediction">{top_class_name} — {top_conf*100:.1f}%</div>', unsafe_allow_html=True)
         st.caption(f"⏱️ Inference Latency: {latency_ms:.1f} ms")
@@ -261,7 +243,7 @@ if uploaded_file is not None:
         top_5_probs, top_5_indices = torch.topk(probabilities, 5)
         
         for prob, idx in zip(top_5_probs, top_5_indices):
-            class_name = CLASS_NAMES[idx.item()]
+            class_name = CLASS_NAMES[idx.item()].replace('_', ' ').title()
             conf_percent = prob.item() * 100
             
             p_col1, p_col2 = st.columns([2, 5])
