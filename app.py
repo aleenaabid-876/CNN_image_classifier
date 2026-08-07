@@ -6,6 +6,8 @@ from torchvision.models import resnet50, ResNet50_Weights
 from PIL import Image
 import numpy as np
 import time
+import os
+import urllib.request
 
 # Try importing the interpretation module if available locally
 try:
@@ -39,7 +41,7 @@ st.markdown("""
         padding: 2.5rem 1rem;
         background-color: #1E293B;
         border-radius: 16px;
-        border: 1px solid rgba(6, 182, 212, 0.2); /* Neon Cyan subtle border */
+        border: 1px solid rgba(6, 182, 212, 0.2);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         text-align: center;
         margin-bottom: 2rem;
@@ -64,7 +66,7 @@ st.markdown("""
         margin-top: 0.6rem;
     }
 
-    /* 3. Stat Cards: #1E293B with Neon Cyan (#06B6D4) Accents */
+    /* 3. Stat Cards */
     .stat-card {
         background-color: #1E293B;
         border: 1px solid rgba(59, 130, 246, 0.2);
@@ -76,7 +78,7 @@ st.markdown("""
     
     .stat-card:hover {
         transform: translateY(-3px);
-        border-color: #06B6D4; /* Neon Cyan glow on hover */
+        border-color: #06B6D4;
     }
 
     .stat-label {
@@ -90,30 +92,49 @@ st.markdown("""
     .stat-value {
         font-size: 1.6rem;
         font-weight: 700;
-        color: #06B6D4; /* Neon Cyan text */
+        color: #06B6D4;
         margin-top: 0.3rem;
     }
 
     /* 4. Top Prediction Banner */
     .top-prediction {
         background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
-        color: #F8FAFC;
-        padding: 1rem 1.25rem;
+        color: #F8FAFC !important;
+        padding: 1.2rem 1.25rem;
         border-radius: 12px;
-        font-size: 1.4rem;
+        font-size: 1.6rem;
         font-weight: 800;
         text-align: center;
         box-shadow: 0 8px 20px rgba(6, 182, 212, 0.25);
         margin-bottom: 1.25rem;
+        display: block;
     }
 
-    /* 5. Custom Neon Cyan Progress Bars */
+    /* 5. Custom File Uploader Fix (Dark Container + Clear Text) */
+    [data-testid="stFileUploader"] {
+        background-color: #1E293B !important;
+        border: 2px dashed #06B6D4 !important;
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    
+    [data-testid="stFileUploader"] * {
+        color: #F8FAFC !important;
+    }
+
+    [data-testid="stFileUploader"] button {
+        background-color: #3B82F6 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+    }
+
+    /* 6. Custom Progress Bars & Text */
     .stProgress > div > div > div > div {
         background-image: linear-gradient(90deg, #3B82F6, #06B6D4);
     }
 
-    /* Text colors for secondary elements */
-    p, span, label {
+    p, span, label, div {
         color: #F8FAFC;
     }
     
@@ -138,6 +159,7 @@ CLASS_NAMES = [
 def load_pytorch_model():
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     in_features = model.fc.in_features
+    
     model.fc = nn.Sequential(
         nn.Linear(in_features, 256),
         nn.ReLU(),
@@ -145,15 +167,21 @@ def load_pytorch_model():
         nn.Linear(256, 10)
     )
     
-    try:
-        model.load_state_dict(torch.load("models/transfer_resnet50.pth", map_location=torch.device('cpu')))
-    except Exception:
-        pass
+    weights_path = "models/transfer_resnet50.pth"
+    weights_loaded = False
     
+    # Check for local weights file
+    if os.path.exists(weights_path):
+        try:
+            model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
+            weights_loaded = True
+        except Exception:
+            weights_loaded = False
+            
     model.eval()
-    return model
+    return model, weights_loaded
 
-model = load_pytorch_model()
+model, is_weights_loaded = load_pytorch_model()
 
 # ---------------------------------------------------------
 # UI Layout
@@ -167,7 +195,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Cleaned-up System Cards (Python version removed, replaced with Project Context)
+# Warning Banner if local weight file is missing
+if not is_weights_loaded:
+    st.warning("⚠️ Local trained weights (`models/transfer_resnet50.pth`) were not found. Running inference with standard initialization.")
+
 col_a, col_b, col_c = st.columns(3)
 
 with col_a:
@@ -232,7 +263,7 @@ if uploaded_file is not None:
         top_conf = probabilities[top_idx].item()
         top_class_name = CLASS_NAMES[top_idx]
 
-        st.markdown(f'<div class="top-prediction">{top_class_name} — {top_conf*100:.1f}%</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="top-prediction">{top_class_name} — {top_conf*100:.1f}% Confidence</div>', unsafe_allow_html=True)
         st.caption(f"⏱️ Inference Latency: {latency_ms:.1f} ms")
 
         st.write("#### Confidence Distribution")
