@@ -1,0 +1,26 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+venv/
+env/
+.venv/
+
+# Datasets and Large Models
+data/
+models/
+*.pth
+*.pt
+*.h5
+*.tflite
+*.tar.gz
+
+# Streamlit config/cache
+.streamlit/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+.git.ignore
