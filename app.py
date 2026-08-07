@@ -112,7 +112,7 @@ st.markdown("""
         background-image: linear-gradient(90deg, #3B82F6, #06B6D4);
     }
 
-    /* 6. FIX FOR FILE UPLOADER (Dark Container + Clear Visible Text) */
+    /* 6. COMPLETE DARK FIX FOR FILE UPLOADER & DROPZONE */
     [data-testid="stFileUploader"] {
         background-color: #1E293B !important;
         border: 2px dashed #06B6D4 !important;
@@ -120,7 +120,21 @@ st.markdown("""
         padding: 1rem;
     }
 
-    [data-testid="stFileUploader"] * {
+    [data-testid="stFileUploaderDropzone"], 
+    [data-testid="stFileUploaderDropzone"] > div,
+    div[data-testid="stFileUploaderDropzone"] {
+        background-color: #0B1120 !important;
+        border-color: rgba(6, 182, 212, 0.4) !important;
+    }
+
+    [data-testid="stFileUploaderFile"] {
+        background-color: #1E293B !important;
+        border: 1px solid rgba(6, 182, 212, 0.3) !important;
+        border-radius: 8px;
+    }
+
+    [data-testid="stFileUploader"] *, 
+    [data-testid="stFileUploaderDropzone"] * {
         color: #F8FAFC !important;
     }
 
