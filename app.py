@@ -184,7 +184,7 @@ model = load_pytorch_model()
 # Title Section
 st.markdown("""
 <div class="hero-container">
-    <h1 class="hero-title">Project 7: Image Classification & Object Recognition</h1>
+    <h1 class="hero-title"> Image Classification & Object Recognition</h1>
     <p class="hero-subtitle">Deep Learning / Computer Vision / Model Interpretability Engine</p>
 </div>
 """, unsafe_allow_html=True)
