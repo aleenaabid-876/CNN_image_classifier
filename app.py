@@ -1,54 +1,29 @@
 import streamlit as st
-
 import torch
-
 import torch.nn as nn
-
 import torchvision.transforms as transforms
-
 from torchvision.models import resnet50, ResNet50_Weights
-
 from PIL import Image
-
 import numpy as np
-
 import time
-
-
+import os
 
 # Try importing the interpretation module if available locally
-
 try:
-
     from interpret import GradCAM, overlay_heatmap
-
     GRADCAM_AVAILABLE = True
-
 except ImportError:
-
     GRADCAM_AVAILABLE = False
 
-
-
 # ---------------------------------------------------------
-
 # Page Setup & Midnight Blue + Neon Cyan Styling
-
 # ---------------------------------------------------------
-
 st.set_page_config(
-
     page_title="Project 7: Image Classification",
-
     page_icon="⚡",
-
     layout="wide",
-
     initial_sidebar_state="collapsed"
-
 )
-
-
 
 # Custom Color Palette Injection: Midnight Blue + Neon Cyan
 st.markdown("""
@@ -138,7 +113,7 @@ st.markdown("""
         background-image: linear-gradient(90deg, #3B82F6, #06B6D4);
     }
 
-    /* 6. FIX FOR FILE UPLOADER (Makes uploader dark & text sharp) */
+    /* 6. FIX FOR FILE UPLOADER (Dark Container + Clear Visible Text) */
     [data-testid="stFileUploader"] {
         background-color: #1E293B !important;
         border: 2px dashed #06B6D4 !important;
@@ -168,199 +143,158 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------------------------------------------------
+# Class Mapping (CIFAR-10)
+# ---------------------------------------------------------
+CLASS_NAMES = [
+    'Airplane ✈️', 'Automobile 🚗', 'Bird 🐦', 'Cat 🐱', 'Deer 🦌',
+    'Dog 🐶', 'Frog 🐸', 'Horse 🐴', 'Ship 🚢', 'Truck 🚚'
+]
+
+# ---------------------------------------------------------
+# Cache Model Loading
+# ---------------------------------------------------------
+@st.cache_resource
+def load_pytorch_model():
+    model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    in_features = model.fc.in_features
+    model.fc = nn.Sequential(
+        nn.Linear(in_features, 256),
+        nn.ReLU(),
+        nn.Dropout(0.4),
+        nn.Linear(256, 10)
+    )
+    
+    weights_path = "models/transfer_resnet50.pth"
+    if os.path.exists(weights_path):
+        try:
+            model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
+        except Exception:
+            pass
+    
+    model.eval()
+    return model
+
+model = load_pytorch_model()
+
+# ---------------------------------------------------------
+# UI Layout
+# ---------------------------------------------------------
+
+# Title Section
+st.markdown("""
+<div class="hero-container">
+    <h1 class="hero-title">Project 7: Image Classification & Object Recognition</h1>
+    <p class="hero-subtitle">Deep Learning / Computer Vision / Model Interpretability Engine</p>
+</div>
+""", unsafe_allow_html=True)
+
+# System Stat Cards
+col_a, col_b, col_c = st.columns(3)
+
+with col_a:
+    st.markdown("""
+<div class="stat-card">
+    <div class="stat-label">Neural Engine</div>
+    <div class="stat-value">PyTorch</div>
+</div>
+""", unsafe_allow_html=True)
 
 with col_b:
-
     st.markdown("""
-
 <div class="stat-card">
-
     <div class="stat-label">Dataset Benchmark</div>
-
     <div class="stat-value">CIFAR-10</div>
-
 </div>
-
 """, unsafe_allow_html=True)
-
-
 
 with col_c:
-
     st.markdown("""
-
 <div class="stat-card">
-
     <div class="stat-label">Model Architecture</div>
-
     <div class="stat-value">ResNet50</div>
-
 </div>
-
 """, unsafe_allow_html=True)
 
-
-
 st.write("")
-
 st.write("")
-
-
 
 # Image Uploader
-
 uploaded_file = st.file_uploader("🖼️ Select or Drop an Image (JPG, PNG, WEBP)", type=["jpg", "jpeg", "png", "webp"])
 
-
-
 if uploaded_file is not None:
-
     image = Image.open(uploaded_file).convert("RGB")
-
-   
-
+    
     transform = transforms.Compose([
-
         transforms.Resize((224, 224)),
-
         transforms.ToTensor(),
-
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
     ])
-
-   
-
+    
     input_tensor = transform(image).unsqueeze(0)
-
-
 
     col1, col2 = st.columns([1, 1], gap="large")
 
-
-
     with col1:
-
         st.subheader("🖼️ Input Media")
-
         st.image(image, use_container_width=True)
 
-
-
     with col2:
-
         st.subheader("🎯 Neural Analysis")
-
-       
-
+        
         start_time = time.time()
-
-       
-
+        
         with torch.no_grad():
-
             outputs = model(input_tensor)
-
             probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
-
-       
-
+        
         latency_ms = (time.time() - start_time) * 1000
 
-
-
         top_idx = torch.argmax(probabilities).item()
-
         top_conf = probabilities[top_idx].item()
-
         top_class_name = CLASS_NAMES[top_idx]
 
-
-
         st.markdown(f'<div class="top-prediction">{top_class_name} — {top_conf*100:.1f}%</div>', unsafe_allow_html=True)
-
         st.caption(f"⏱️ Inference Latency: {latency_ms:.1f} ms")
 
-
-
         st.write("#### Confidence Distribution")
-
         top_5_probs, top_5_indices = torch.topk(probabilities, 5)
-
-       
-
+        
         for prob, idx in zip(top_5_probs, top_5_indices):
-
             class_name = CLASS_NAMES[idx.item()]
-
             conf_percent = prob.item() * 100
-
-           
-
+            
             p_col1, p_col2 = st.columns([2, 5])
-
             with p_col1:
-
                 st.write(f"**{class_name}**")
-
             with p_col2:
-
                 st.progress(float(prob.item()))
-
                 st.caption(f"{conf_percent:.1f}% Confidence")
 
-
-
     # Grad-CAM Section
-
     if GRADCAM_AVAILABLE:
-
         st.divider()
-
         st.subheader("🧬 Model Interpretability (Grad-CAM)")
-
         st.write("Visualizing the convolutional feature maps driving the classification decision:")
 
-
-
         try:
-
             target_layer = model.layer4[-1]
-
             cam_extractor = GradCAM(model, target_layer)
-
-           
-
+            
             heatmap = cam_extractor.generate(input_tensor, class_idx=top_idx)
-
-           
-
+            
             orig_np = np.array(image.resize((224, 224)))
-
             cam_overlay = overlay_heatmap(orig_np, heatmap)
 
-
-
             g_col1, g_col2 = st.columns(2)
-
             with g_col1:
-
                 st.image(heatmap, caption="Activation Heatmap", use_container_width=True, clamp=True)
-
             with g_col2:
-
                 st.image(cam_overlay, caption="Neural Attention Overlay (Grad-CAM)", use_container_width=True)
-
-       
-
+        
         except Exception as e:
-
             st.error(f"Visualization error: {e}")
 
-
-
 else:
-
     st.write("")
-
-    st.info("Upload an image above to run the vision recognition model.") 
+    st.info("Upload an image above to run the vision recognition model.")
