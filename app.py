@@ -7,12 +7,9 @@ from PIL import Image
 import numpy as np
 import time
 
-# Try importing the interpretation module if available locally
-try:
-    from interpret import GradCAM, overlay_heatmap
-    GRADCAM_AVAILABLE = True
-except ImportError:
-    GRADCAM_AVAILABLE = False
+# Temporary replacement to see the actual error in Streamlit logs/UI
+from interpret import GradCAM, overlay_heatmap
+GRADCAM_AVAILABLE = True
 
 # ---------------------------------------------------------
 # Page Setup & Midnight Blue + Neon Cyan Styling
